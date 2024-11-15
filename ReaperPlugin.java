@@ -16,7 +16,7 @@ import java.util.Set;
 
 @PluginDescriptor(
         name = "Reaper Plugin",
-        description = "WIP, Tileman Mode that lets you traverse teh game based on enemies killed."
+        description = "WIP, Tileman Mode that lets you traverse the game based on enemies killed."
 )
 public class ReaperPlugin extends Plugin
 {
