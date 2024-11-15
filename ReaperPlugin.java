@@ -76,4 +76,11 @@ public class ReaperPlugin extends Plugin
             System.out.println("NPC Dead or Despawned: " + npc.getId() + " " + npc.getName());
         }
     }
+
+        // TO DO
+        // make sure NPC despawining is dying to player via combat
+        //
+        // having issues implementing npc.isInteracting
+        // can't determine it based on if NPC is next to player: ranged weapons exist. can limit to melee for proof of concept?
+        // 
 }
