@@ -1,11 +1,11 @@
-package net.runelite.client.plugins.Reaper;
+package net.runelite.client.plugins.example;
 
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -15,72 +15,80 @@ import java.util.HashSet;
 import java.util.Set;
 
 @PluginDescriptor(
-        name = "Reaper Plugin",
-        description = "WIP, Tileman Mode that lets you traverse the game based on enemies killed."
+		name = "Reaper Plugin",
+		description = "WIP, Tileman Mode that lets you traverse the game based on enemies killed."
 )
 public class ReaperPlugin extends Plugin
 {
-    @Inject
-    private Client client;
+	@Inject
+	private Client client;
 
-    private final Set<Integer> npcIdsInRenderDistance = new HashSet<>();
+	private final Set<Integer> npcIdsInRenderDistance = new HashSet<>();
 
-    private static final int MAX_RENDER_DISTANCE = 10; //max weapon range
+	private static final int MAX_ATTACK_DISTANCE = 10; //max weapon range
+	private static final int MELEE_ATTACK_RANGE = 2;
 
-    @Override
-    protected void startUp() throws Exception
-    {
-        System.out.println("Reaper Plugin started.");
-    }
+	private static int tilecount = 0;
 
-    @Override
-    protected void shutDown() throws Exception
-    {
-        npcIdsInRenderDistance.clear();
-        System.out.println("Reaper Plugin stopped.");
-    }
+	@Override
+	protected void startUp() throws Exception
+	{
+		System.out.println("Reaper Plugin started.");
+	}
 
-    @Subscribe
-    public void onNpcSpawned(NpcSpawned event)
-    {
-        NPC npc = event.getNpc();
-        if (npc == null) return;
+	@Override
+	protected void shutDown() throws Exception
+	{
+		npcIdsInRenderDistance.clear();
+		System.out.println("Reaper Plugin stopped.");
+	}
 
-        WorldPoint npcLocation = npc.getWorldLocation();
-        WorldPoint playerLocation = client.getLocalPlayer().getWorldLocation();
+	@Subscribe
+	public void onNpcSpawned(NpcSpawned event)
+	{
+		NPC npc = event.getNpc();
+		int npcCombatLevel = npc.getCombatLevel();
+		if (npcCombatLevel <= 0) return;
 
-        int distance = playerLocation.distanceTo(npcLocation);
+		WorldPoint npcLocation = npc.getWorldLocation();
+		WorldPoint playerLocation = client.getLocalPlayer().getWorldLocation();
 
-        if (distance <= MAX_RENDER_DISTANCE)
-        {
-            npcIdsInRenderDistance.add(npc.getIndex());
-            System.out.println("NPC spawned within 10 unit range: " + npc.getId());
-        }
+		int distance = playerLocation.distanceTo(npcLocation);
 
-        String npcName = npc.getName() != null ? npc.getName() : "Unnamed NPC";
-        client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "NPC Spawned: " + npcName, null);
-    }
+		if (distance <= MAX_ATTACK_DISTANCE)
+		{
+			npcIdsInRenderDistance.add(npc.getIndex());
+			System.out.println("NPC spawned within 10 unit range: " + npc.getId());
+		}
 
-    @Subscribe
-    public void onNpcDespawned(NpcDespawned event)
-    {
-        NPC npc = event.getNpc();
-        if (npc == null) return;
+		String npcName = npc.getName();
+		client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "NPC Spawned: " + npcName, null);
+	}
 
-        if (npcIdsInRenderDistance.contains(npc.getIndex()))
-        {
-            npcIdsInRenderDistance.remove(npc.getIndex());
+	@Subscribe
+	public void onNpcDespawned(NpcDespawned event)
+	{
+		NPC npc = event.getNpc();
+		if (npc == null) return;
+		if (!npc.isDead()) return;
 
-            String message = "NPC with ID " + npc.getId() + " " + npc.getName() + " has died or despawned!";
-            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message, null);
-            System.out.println("NPC Dead or Despawned: " + npc.getId() + " " + npc.getName());
-        }
-    }
+		WorldPoint npcLocation = npc.getWorldLocation();
+		WorldPoint playerLocation = client.getLocalPlayer().getWorldLocation();
+		int distance = playerLocation.distanceTo(npcLocation);
 
-        // TO DO
-        // make sure NPC despawining is dying to player via combat
-        //
-        // having issues implementing npc.isInteracting
-        // can't determine it based on if NPC is next to player: ranged weapons exist. can limit to melee for proof of concept?
-        // 
-}
+		if (distance < MELEE_ATTACK_RANGE) { //hardwiring that the player must be next to the dying NPC to count
+
+			if (npcIdsInRenderDistance.contains(npc.getIndex())) {
+				npcIdsInRenderDistance.remove(npc.getIndex());
+
+				for (int i = 0; i < npc.getCombatLevel(); i++){
+					tilecount++;
+				}
+
+				String message = "NPC with ID " + npc.getId() + " " + npc.getIndex() + " " + npc.getName() + " has died or despawned!";
+				client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message, null);
+				System.out.println("NPC Dead or Despawned: " + npc.getId() + " " + npc.getName());
+				System.out.println("tiles available: " + tilecount);
+			}
+		}
+	}
